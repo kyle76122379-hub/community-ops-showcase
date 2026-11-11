@@ -1,0 +1,16 @@
+# 자격 증명 · 개인 데이터 (절대 커밋 금지)
+credentials/
+*.db
+*_token.json
+token.json
+.env
+.env.*
+
+# 실행 산출물
+__pycache__/
+*.pyc
+logs/
+tmp/
+dump.rdb
+*.bak
+*.bak_*
