@@ -107,6 +107,13 @@ sqlite3 user_data.db "select count(*) from users"
 sqlite3 market.db     "select count(*) from stocks; select count(*) from trades;"
 ```
 
+## 관련 저장소
+
+| 저장소 | 내용 |
+|---|---|
+| `community-ops-showcase` (이 저장소) | 커뮤니티 운영 자동화 — 봇 + 웹 대시보드 + 게임 클라이언트 |
+| `blog-autopilot` | 수집 → AI 초안 → 사람 검토 파이프라인. 6종 모델 폴백 + 회로 차단 설계 |
+
 ## 문의
 
 요청 시 코드 리뷰 세션 또는 추가 화면 캡처로 확인해 드릴 수 있습니다.
