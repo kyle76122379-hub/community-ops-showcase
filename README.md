@@ -8,6 +8,11 @@
 - 검증: 순수 로직 단위 테스트 60개 (숙련도 17 + 채집 13 + 농사 30)
 - 운영: 안드로이드 기기 1대에서 봇 + 웹 동시 상주, 20초 주기 자동 복구
 
+> **AI는 코딩을 도와줄 수 있지만, 검수와 전체 구조·아이디어 설계는 여전히 사람의 영역입니다.**
+> 가격·확률·보상을 서버가 내려주고 클라이언트는 계산하지 않게 한 것도, AI가 만든 코드를 로그로 확인한 뒤에만
+> 배포한 것도 같은 판단이었습니다. AI는 도구이므로, AI 환경이 좋아질수록 *그것을 무엇에 어떻게 쓸지 정하는
+> 아이디어*가 핵심 가치가 된다고 봅니다.
+
 > **이 저장소는 포트폴리오용 발췌본입니다.**
 > 전체 코드는 5만 줄이 넘어 읽기 어렵기 때문에, 핵심 모듈과 그 단위 테스트만 담았습니다.
 > 토큰 · OAuth 키 · 사용자 DB는 포함하지 않았습니다(아래 [보안](#보안) 참조).
@@ -147,6 +152,31 @@ func _on_act_data(code: int, data: Dictionary):
 | 실행 환경 | 웹(WASM) / 네이티브 — 동일 코드 |
 
 관련 파일: [`src/game/Main.gd`](src/game/Main.gd) · [`src/game/ledger.py`](src/game/ledger.py) · [`docs/game_contract.md`](docs/game_contract.md)
+
+### 빌드 산출물은 저장소에 없습니다
+
+웹 실행에 필요한 `index.wasm`(38MB) · `index.pck`(5.3MB) 등은 **재생성 가능한 산출물**이라 커밋하지 않았습니다.
+합계 57MB이고, 대용량 바이너리는 저장소를 무겁게 만들어 검토에도 도움이 되지 않습니다.
+
+| 항목 | 크기 | 저장소 포함 |
+|---|---|---|
+| `index.wasm` | 38MB | ✗ |
+| `index.pck` | 5.3MB | ✗ |
+| `index.js` | 274KB | ✗ |
+| `src/game/Main.gd` (소스) | 157KB | ✓ |
+| `src/game/ledger.py` | 1.2KB | ✓ |
+
+대신 **빌드 없이 코드를 읽고 검증**할 수 있게 했습니다.
+클라이언트 전체 소스(`Main.gd` 4,515줄), 서버 계약(`docs/game_contract.md`), 재화 원장(`ledger.py`),
+그리고 **설치 없이 실행되는 테스트 60개**입니다.
+
+```bash
+cd src && python test_skills.py     # 17개 통과
+cd src && python test_gathering.py  # 13개 통과
+```
+
+> 라이브 게임은 로그인 세션이 필요해 외부에서 바로 열리지 않습니다.
+> 화면은 [`images/09_game_town.png`](images/09_game_town.png) · [`images/10_game_skills.png`](images/10_game_skills.png) 에 실제 캡처로 남겼습니다.
 
 ## 보안
 
