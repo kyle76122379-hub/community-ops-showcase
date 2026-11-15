@@ -4,7 +4,7 @@
 기획 · 설계 · 개발 · 배포 · 운영을 1인이 수행했습니다.
 
 - 실사용: 누적 220명 중 활동 사용자 193명 / 모의 주식 40종 · 체결 206건
-- 규모: Python 132개 파일 · 57,860줄 / 웹 화면 34개(13,763줄) / Godot 게임 클라이언트 4,300줄
+- 규모: Python 132개 파일 · 57,860줄 / 웹 화면 34개(13,763줄) / Godot 게임 클라이언트 4,515줄
 - 검증: 순수 로직 단위 테스트 60개 (숙련도 17 + 채집 13 + 농사 30)
 - 운영: 안드로이드 기기 1대에서 봇 + 웹 동시 상주, 20초 주기 자동 복구
 
@@ -25,6 +25,10 @@
 | 누적 통계 | 스크림 운영 관리 |
 |---|---|
 | ![통계](images/07_stats.png) | ![스크림관리](images/08_scrim_admin.png) |
+
+| Godot 게임 — 마을 | 숙련도 (서버가 내려준 값) |
+|---|---|
+| ![게임 마을](images/09_game_town.png) | ![숙련도](images/10_game_skills.png) |
 
 거래소: ![거래소](images/05_shop.png)
 
@@ -88,6 +92,61 @@ python test_gathering.py   # === 13개 테스트 전부 통과 ===
 4. **규칙은 규칙표로 고정하고 로직에서 분리한다.** 숙련도·채집 같은 시스템은 원작 규칙표를 데이터로 두고
    DB·화면에 의존하지 않는 순수 함수로 분리해, 화면 없이도 단위 테스트로 검증됩니다.
 5. **위험한 변경은 한 경로로.** 지급·차감·주문은 단일 함수로 모으고 모든 변동을 로그로 남겼습니다.
+
+
+## 게임 클라이언트 ↔ 서버 XP 원장
+
+디스코드 채팅 · 웹 대시보드 · Godot 게임이 **하나의 XP 원장**을 공유합니다.
+도박으로 잃은 XP가 게임에서 영토를 사지 못하게 하고, 게임에서 번 XP가 휴면 판정의 근거가 됩니다.
+
+### 이 프로젝트에서 가장 오래 붙잡은 문제
+
+Godot 웹(WASM) 빌드에서 `HTTPRequest`로 인증 API를 호출하면 **401만** 돌아옵니다.
+브라우저 세션 쿠키를 노드가 자동으로 붙여주지 않기 때문입니다. 네이티브에서는 같은 코드가 정상 동작합니다.
+
+해결: 웹 빌드에서는 `JavaScriptBridge.eval`로 **브라우저 자신의 `fetch`** 를 호출하고
+(`credentials: 'include'`), 결과를 `window.<key>`에 담아 폴링으로 회수합니다.
+네이티브는 기존 `HTTPRequest` 경로를 그대로 씁니다 — **한 코드, 두 환경**.
+
+```gdscript
+# src/game/Main.gd — _js_fetch()
+var js := "window.%s=null;" \
+          "fetch('%s',%s).then(async r=>{" \
+          "  const t=await r.text();" \
+          "  window.%s={code:r.status,body:t}" \
+          "})" % [key, path, init, key]
+JavaScriptBridge.eval(js)
+pending.append({"key": key, "cb": cb})
+```
+
+### 클라이언트는 계산하지 않는다
+
+가격·확률·보상은 전부 서버 `/api/game/bootstrap`이 내려줍니다. 클라이언트는 그리기와 입력 전달만 합니다.
+액션 응답을 낙관적으로 쓰지 않고 **항상 재부트스트랩**합니다.
+
+```gdscript
+func _on_act_data(code: int, data: Dictionary):
+	_toast(_act_message(panel_mode, data))
+	_fetch_boot()          # ← 서버가 최종 판정자
+```
+
+### 모든 XP 변경이 통과하는 단일 경로
+
+`src/game/ledger.py` — 채팅 XP 지급과 게임 보상이 서로의 변경을 덮어쓰지 않도록
+확인과 차감을 같은 트랜잭션(`db.change_user`) 안에서 처리합니다.
+
+### 규모
+
+| 항목 | 값 |
+|---|---|
+| 게임 클라이언트 (`Main.gd`) | 4,515줄 |
+| 게임 전용 API (`/api/game/*`) | 7개 |
+| 미니게임 API (`/api/minigame/*`) | 29개 |
+| 던전 | 10층 · 21×15 그리드 · 턴제 전투 |
+| 숙련도 | 5종 × 10레벨 + 직업 2택 |
+| 실행 환경 | 웹(WASM) / 네이티브 — 동일 코드 |
+
+관련 파일: [`src/game/Main.gd`](src/game/Main.gd) · [`src/game/ledger.py`](src/game/ledger.py) · [`docs/game_contract.md`](docs/game_contract.md)
 
 ## 보안
 
